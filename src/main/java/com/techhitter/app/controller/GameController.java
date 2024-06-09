@@ -16,11 +16,11 @@ public class GameController {
     @PostMapping(value = "/create/")
     public ResponseEntity<String> createGame(@RequestBody GameConfigDto gameConfigDto){
         try{
-            gameService.createGame(gameConfigDto);
+            gameConfigDto = gameService.createGame(gameConfigDto);
         }catch (Exception e){
             return ResponseEntity.badRequest().body(e.getMessage());
         }
-        return ResponseEntity.ok().body(gameService.generateUniqueKeyForGame());
+        return ResponseEntity.ok().body(gameConfigDto.getKey());
     }
 
     @GetMapping(value = "/start/{gameKey}")

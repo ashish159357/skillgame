@@ -1,11 +1,18 @@
 package com.techhitter.app.service;
 
+import com.netflix.appinfo.InstanceInfo;
+import com.netflix.discovery.EurekaClient;
 import com.techhitter.app.dto.GameConfigDto;
+import com.techhitter.app.dto.QueObject;
 import com.techhitter.app.registry.GameConfigurationRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -21,6 +28,12 @@ public class GameServiceImpl implements GameService{
 
     @Autowired
     private GameConfigurationRegistry gameConfigurationRegistry;
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    @Autowired
+    private EurekaClient discoveryClient;
 
     private String topicPrefix = "/game/";
 
@@ -47,11 +60,15 @@ public class GameServiceImpl implements GameService{
 
         // Counter to track number of executions
         final int[] executionCount = {0};
+        List<QueObject> queObjects = this.getQuestions();
+        Collections.shuffle(queObjects);
 
         // Schedule a task to run every 5 seconds
         scheduler.scheduleAtFixedRate(() -> {
             executionCount[0]++;
-            this.template.convertAndSend(topic,"Task executed at: " + System.currentTimeMillis());
+            QueObject queObject = queObjects.remove(0);
+            this.template.convertAndSend(topic,queObject);
+
             // Stop the scheduler after 5 executions
             if (executionCount[0] >= gameConfigDto.getNo_of_question()) {
                 scheduler.shutdown();
@@ -64,5 +81,16 @@ public class GameServiceImpl implements GameService{
     public String generateUniqueKeyForGame() {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
+    }
+
+    public List<QueObject> getQuestions(){
+        InstanceInfo serviceInstanceInfo = discoveryClient.getApplication("skillapi")
+                .getInstances()
+                .get(0);
+
+        String homePageUrl = serviceInstanceInfo.getHomePageUrl();
+
+        List<QueObject> queObjects = restTemplate.getForObject(serviceInstanceInfo.getHomePageUrl()+"/api/v1/quetions/Java",List.class);
+        return queObjects;
     }
 }

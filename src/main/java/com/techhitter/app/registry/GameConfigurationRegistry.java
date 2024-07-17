@@ -1,10 +1,7 @@
 package com.techhitter.app.registry;
 
 import org.springframework.stereotype.Component;
-
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ScheduledExecutorService;
 import com.techhitter.app.dto.GameConfigDto;
 
 @Component

@@ -1,5 +1,6 @@
 package com.techhitter.app.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.netflix.appinfo.InstanceInfo;
 import com.netflix.discovery.EurekaClient;
 import com.techhitter.app.dto.GameConfigDto;
@@ -10,7 +11,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
-
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -35,7 +35,7 @@ public class GameServiceImpl implements GameService{
     @Autowired
     private EurekaClient discoveryClient;
 
-    private String topicPrefix = "/game/";
+    private String topicPrefix = "/topic/game/";
 
     @Override
     public GameConfigDto createGame(GameConfigDto gameConfigDto) {
@@ -62,11 +62,12 @@ public class GameServiceImpl implements GameService{
         final int[] executionCount = {0};
         List<QueObject> queObjects = this.getQuestions();
         Collections.shuffle(queObjects);
+        ObjectMapper mapper = new ObjectMapper();
 
-        // Schedule a task to run every 5 seconds
+        // Schedule a task to run every 'Time_for_each_question' seconds for 'No_of_question' times
         scheduler.scheduleAtFixedRate(() -> {
+            QueObject queObject = mapper.convertValue(queObjects.remove(0), QueObject.class);
             executionCount[0]++;
-            QueObject queObject = queObjects.remove(0);
             this.template.convertAndSend(topic,queObject);
 
             // Stop the scheduler after 5 executions

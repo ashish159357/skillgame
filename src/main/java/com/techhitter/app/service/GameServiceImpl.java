@@ -39,12 +39,19 @@ public class GameServiceImpl implements GameService{
 
     @Override
     public GameConfigDto createGame(GameConfigDto gameConfigDto) {
-        if(gameConfigDto.getSubject() == null || gameConfigDto.getSubject() == ""){
-            throw new NullPointerException("Subject can't be Null, please check!");
+        try {
+
+            if(gameConfigDto.getSubject() == null || gameConfigDto.getSubject() == ""){
+                throw new NullPointerException("Subject can't be Null, please check!");
+            }
+            var key = generateUniqueKeyForGame();
+            gameConfigDto.setKey(key);
+            gameConfigurationRegistry.addMap(key,gameConfigDto);
+            startGame(key);
+
+        }catch (Exception exception){
+            log.error("Error in creating game : {}",exception.getMessage());
         }
-        var key = generateUniqueKeyForGame();
-        gameConfigDto.setKey(key);
-        gameConfigurationRegistry.addMap(key,gameConfigDto);
         return gameConfigDto;
     }
 
@@ -56,24 +63,32 @@ public class GameServiceImpl implements GameService{
         }
 
         var topic = topicPrefix + gameConfigDto.getKey();
+        log.debug("creating scheduler for topic : {}",topic);
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
         // Counter to track number of executions
         final int[] executionCount = {0};
-        List<QueObject> queObjects = this.getQuestions();
+        var queObjects = this.getQuestions();
         Collections.shuffle(queObjects);
-        ObjectMapper mapper = new ObjectMapper();
+        var mapper = new ObjectMapper();
 
         // Schedule a task to run every 'Time_for_each_question' seconds for 'No_of_question' times
         scheduler.scheduleAtFixedRate(() -> {
-            QueObject queObject = mapper.convertValue(queObjects.remove(0), QueObject.class);
-            executionCount[0]++;
-            this.template.convertAndSend(topic,queObject);
+            try {
+                QueObject queObject = mapper.convertValue(queObjects.remove(0), QueObject.class);
+                executionCount[0]++;
+                this.template.convertAndSend(topic, queObject);
+                log.info("Sent question {} to topic: {}", queObject.toString(), topic);
 
-            // Stop the scheduler after 5 executions
-            if (executionCount[0] >= gameConfigDto.getNo_of_question()) {
-                scheduler.shutdown();
-                log.info("Sending Quetion is stop for topic : {}",topic);
+
+                // Stop the scheduler after 5 executions
+                if (executionCount[0] >= gameConfigDto.getNo_of_question()) {
+                    this.template.convertAndSend(topic,"game has ended");
+                    scheduler.shutdown();
+                    log.info("Sending Quetion is stop for topic : {}", topic);
+                }
+            }catch (Exception e){
+                log.error("Error in sending question to topic : {}", e.getMessage());
             }
         }, 0, gameConfigDto.getTime_for_each_question(), TimeUnit.SECONDS);
     }
@@ -89,9 +104,7 @@ public class GameServiceImpl implements GameService{
                 .getInstances()
                 .get(0);
 
-        String homePageUrl = serviceInstanceInfo.getHomePageUrl();
 
-        List<QueObject> queObjects = restTemplate.getForObject(serviceInstanceInfo.getHomePageUrl()+"/api/v1/quetions/Java",List.class);
-        return queObjects;
+        return restTemplate.getForObject(serviceInstanceInfo.getHomePageUrl() + "/api/v1/quetions/Java", List.class);
     }
 }

@@ -8,14 +8,21 @@
 		<version>2.6.3</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
+
 	<groupId>com.techhitter</groupId>
+
 	<artifactId>game</artifactId>
+
 	<version>0.0.1-SNAPSHOT</version>
+
 	<name>game</name>
+
 	<description>Service for Playing Game with friends</description>
+
 	<properties>
 		<java.version>17</java.version>
 	</properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -12,4 +12,5 @@ public class QueObject {
     private boolean type;
     private ArrayList<String> ans;
     private String subject;
+    private int timeLimit;
 }

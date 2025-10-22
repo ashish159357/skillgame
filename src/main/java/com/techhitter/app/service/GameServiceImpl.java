@@ -77,9 +77,10 @@ public class GameServiceImpl implements GameService{
             try {
                 QueObject queObject = mapper.convertValue(queObjects.remove(0), QueObject.class);
                 executionCount[0]++;
-                this.template.convertAndSend(topic, queObject);
-                log.info("Sent question {} to topic: {}", queObject.toString(), topic);
+                queObject.setTimeLimit(gameConfigDto.getTime_for_each_question());
 
+                this.template.convertAndSend(topic, queObject);
+                log.info("Sent question {} to topic: {}", queObject, topic);
 
                 // Stop the scheduler after 5 executions
                 if (executionCount[0] >= gameConfigDto.getNo_of_question()) {
